@@ -35,7 +35,7 @@
               </div>
               <div class="input-grp dob-grp">
                 <input
-                  type="text"
+                  type="email"
                   class="label"
                   placeholder="Email"
                   v-model="email"
@@ -71,7 +71,7 @@
                   @click="getCountryInfo"
                   style="position: relative; left: 0.5vw; width: 16.5vw"
                 >
-                  <option>Country</option>
+                  <option value="india" disabled></option>
                   <option
                     v-for="country in countries"
                     :key="country.id"
@@ -90,7 +90,8 @@
                 <input
                   class="phone"
                   type="text"
-                  :placeholder="'' + getPhoneCode(country) + ' Ph no'"
+                  v-model="phone"
+                  :placeholder="getPhoneCode(country) + ' Ph no'"
                 />
               </div>
               <div class="bottom-grp">
@@ -187,11 +188,7 @@
                             Submit
                           </button>
                           <!-- Add your submit functionality here -->
-                          <button
-                            type="button"
-                            class="btn-secondary"
-                            @click="Resendotp"
-                          >
+                          <button type="button" class="btn-secondary">
                             Resend
                           </button>
                         </div>
@@ -203,20 +200,20 @@
 
               <div class="hero-right-ribbon">
                 <div class="ribbon-grp">
-                  <h5>39997</h5>
-                  <h6>Total meditators</h6>
+                  <h3>39997</h3>
+                  <h4>Total meditators</h4>
                 </div>
                 <div class="ribbon-grp">
-                  <h5>39997</h5>
-                  <h6>Total meditators</h6>
+                  <h3>39997</h3>
+                  <h4>Total meditators</h4>
                 </div>
                 <div class="ribbon-grp">
-                  <h5>39997</h5>
-                  <h6>Total meditators</h6>
+                  <h3>39997</h3>
+                  <h4>Total meditators</h4>
                 </div>
                 <div class="ribbon-grp">
-                  <h5>39997</h5>
-                  <h6>Total meditators</h6>
+                  <h3>39997</h3>
+                  <h4>Total meditators</h4>
                 </div>
               </div>
             </div>
@@ -251,6 +248,7 @@ export default {
       countries: [],
       flag: [],
       digitalCode: [],
+      phone: "",
       formattedPhoneNumber: "",
       referencecategory: "",
       language: "",
@@ -264,16 +262,20 @@ export default {
   },
   mounted() {
     this.getCountryInfo();
+    if (this.showDialog) {
+      this.requestOTP(); // Call the OTP request API when the component is mounted and the dialog box is open
+    }
   },
   computed: {
     formattedPhoneNumber: {
       get() {
-        return this.phone;
+        return `${this.getPhoneCode(this.country)} ${this.phone}`;
       },
       set(value) {
         const code = this.getPhoneCode(this.country);
-        const phone = value.replace("" + code, "").trim(); // removing the code from the input value
+        const phone = value.replace(code + "").trim(); // removing the code from the input value
         this.phone = phone;
+        console.log(phone);
       },
     },
   },
@@ -282,23 +284,25 @@ export default {
       this.isLoginVisible = !this.isLoginVisible;
       this.isRedBackground = !this.isRedBackground;
     },
+
     async getCountryInfo() {
       try {
         const response = await axios.get(
-          "http://192.168.1.73:3000/api/reistrations/countrieslist"
+          "http://89.47.164.122:4000/api/registrations/countrieslist"
         );
         const countryData = response.data;
         this.countries = countryData;
         this.flags = countryData.map((country) => country.flag);
         this.digitalCodes = countryData.map((country) => country.phonecode);
-        console.log(this.countryNames);
-        console.log(this.flags);
-        console.log(this.digitalCodes);
+        // console.log(this.countryNames);
+        // console.log(this.flags);
+        // console.log(this.digitalCodes);
       } catch (error) {
         console.error("Error fetching country information", error);
         throw error;
       }
     },
+
     getFlag(selectedCountry) {
       const index = this.countries.findIndex(
         (country) => country.name === selectedCountry
@@ -308,6 +312,7 @@ export default {
       }
       return "";
     },
+
     getPhoneCode(selectedCountry) {
       const index = this.countries.findIndex(
         (country) => country.name === selectedCountry
@@ -322,24 +327,157 @@ export default {
       return "";
     },
 
+    showDialogbox() {
+      if (this.validateForm()) {
+        this.showDialog = true;
+        this.requestotp(); // Show the dialog box if the form is valid
+      }
+    },
 
-    showDialogbox ()
-    {
-      this.showDialog = true;
+    validateForm() {
+      if (
+        this.firstname === "" ||
+        this.lastname === "" ||
+        this.email === "" ||
+        this.dob === "" ||
+        this.country === "" ||
+        this.phone === "" ||
+        this.referencecategory === "" ||
+        this.language === "" ||
+        this.comments === ""
+      ) {
+        alert("Please fill in all fields");
+        return false;
+      }
+      return true;
     },
-    submitForm() {
-      // Handle submit logic here
-      // For example, you can print the OTP to the console
-      console.log("Submitted OTP:", this.otp);
-      // You can add more complex logic for submitting the form here
-      // Close the dialog box after submitting
-      this.showDialog = false;
+
+    async requestotp() {
+      const formdata = {
+        first_name: this.firstname,
+        last_name: this.lastname,
+        DOB: this.dob,
+        email: this.email,
+        country: this.country,
+        phone: this.phone,
+        reference: this.referencecategory,
+        language: this.language,
+        remark: this.comments,
+      };
+
+      try {
+        
+        const response = await axios.post(
+          "http://89.47.164.122:4000/api/registrations/registerUser",
+          {
+            phone: this.phone,
+            formdata,
+          }
+        );
+        console.log(response.data);
+        if (response.status === 200) {
+          console.log("OTP sent successfully:", response.data);
+          
+          // this.$router.push('/demo');
+        } 
+      } catch (error) {
+        console.error("Error requesting OTP:", error);
+      }
     },
+
+    async submitotp() {
+  let OTP = this.otp;
+  try {
+    const response = await axios.post(
+      "http://89.47.164.122:4000/api/registrations/verify_otp",
+      {
+        OTP: OTP,
+        phone: this.phone,
+      }
+    );
+    if (response.status === 200) {
+      console.log(response, 'submit');
+      alert("Registration Successful");
+      // if (response.data.toLowerCase() === 'submit') {
+        
+      // }
+      //  else {
+      //   alert("Invalid OTP. Please try again.");
+      // }
+    }
+  } catch (error) {
+    console.error("Error while submitting OTP:", error);
+    alert("An error occurred while verifying the OTP. Please try again.");
+  }
+}
+
+
+    // async requestotp() {
+    //   const formdata = {
+    //     first_name: this.firstname,
+    //     last_name: this.lastname,
+    //     DOB: this.dob,
+
+    //     email: this.email,
+    //     country: this.country,
+    //     phone: this.phone,
+    //     reference: this.referencecategory,
+    //     language: this.language,
+    //     remark: this.comments,
+    //   };
+    //   try {
+    //     console.log(formdata);
+    //     const response = await axios.post(
+    //       "http://89.47.164.122:4000/api/registrations/registerUser",
+    //       {
+    //         phone: this.phone,
+    //         formdata,
+    //       }
+    //     );
+    //     console.log(response.data);
+    //     this.$router.push();
+
+    //     console.log("OTP sent successfully:", data);
+    //   } catch (error) {
+    //     console.error("Error requesting OTP:");
+    //   }
+    // },
+
+    // async Resendotp() {
+    //       try {
+
+    //         const response = await resendOTP(phoneNumber);
+    //         console.log('OTP Resent:', response.data);
+
+    //       } catch (error) {
+    //         console.error('Error while resending OTP:', error);
+
+    //       }
+    //   },
+
+    //     async  submitotp() {
+    //       let OTP = this.otp;
+
+    // try{
+    //   const response = await axios.post("http://89.47.164.122:4000/api/registrations/verify_otp",
+    // { data: OTP, phone : this.phone});
+
+    //    if(OTP==this.otp)
+    //    {
+    //     alert('Registration Sucessful');
+    //    }
+    // }
+    // catch (error) {
+    //     console.error('Error while resending OTP:', error);
+    //     // Handle error here
+    //   }
+    // }
   },
 };
 </script>
 
 <style>
+@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;500&display=swap');
 * {
   margin: 0;
   font-family: "Poppins", sans-serif;
@@ -423,7 +561,7 @@ export default {
   top: 0;
   height: 100%;
   width: 30%;
-  background-image: url("../components/step.jpg");
+  background-image: url("../components/side.jpeg");
   background-size: cover;
   transform: translateX(0); /* Initially positioned on the left */
   transition: opacity 3s; /* Add a transition for opacity */
@@ -459,30 +597,35 @@ export default {
   display: flex;
   top: 20vh;
   justify-content: center;
-  background-image: url("../bg.jpg");
+  background-image: url("../components/background.jpeg");
 
   background-size: cover;
   background-repeat: no-repeat;
-  background-position: center;
-  opacity: 0.8;
+  /* background-position: center; */
+  background-position: 35% 16%;
+  overflow: hidden;
+  opacity: 0.9;
 }
 .reg-hero .hero-right-heading {
   display: flex;
   justify-content: center;
   margin: 5vh 0 5vh 0;
-  font-size: 17px;
+  font-size: 19px;
+  color: #05616D;
+
 }
 .reg-hero .hero-right-content {
   height: 100vh;
+  width: 55vw;
   position: relative;
   top: 7vh;
 }
-.hero-right-input-grp {
-  width: 40vw !important;
-}
+
 .hero-right-input-grp .input-grp .label {
   width: 16vw;
   height: 6vh;
+  color: #05616D;
+  font-weight:500;
   border-radius: 5px;
   border: none;
   border: 0.5px solid rgba(0, 0, 0, 0.3);
@@ -496,6 +639,7 @@ export default {
 .hero-right-input-grp .remarks {
   width: 92%;
   height: 6vh;
+  color: #05616D;
   border: none;
   outline: none;
   border-radius: 5px;
@@ -550,7 +694,7 @@ export default {
   justify-content: space-around;
 }
 .hero-right-input-grp {
-  width: 100vh;
+  width: 55vw;
   height: 100vh;
   display: flex;
   flex-direction: column;
@@ -558,6 +702,7 @@ export default {
 }
 .ref-grp {
   width: 17vw;
+  background-color: #fff;
   display: flex;
   justify-content: space-around;
   align-items: center;
@@ -579,6 +724,7 @@ export default {
   width: 12vw !important;
   position: relative;
   left: 1.5vw;
+  color: #05616D;
 }
 .bottom-grp {
   height: 12vw !important;
@@ -595,7 +741,7 @@ export default {
   top: -1vw;
 }
 .hero-right-content .hero-right-ribbon {
-  color: red;
+  color: rgb(22, 8, 8);
   display: flex;
   justify-content: space-between;
   position: relative;
@@ -603,7 +749,7 @@ export default {
 }
 .hero-right-content .hero-right-ribbon .ribbon-grp {
   display: flex;
-
+  
   flex-direction: column;
   align-items: center;
   /* margin:5vh 0 0 0; */
@@ -624,6 +770,7 @@ export default {
 .modal-dialog {
   position: relative;
   width: auto;
+  height: auto;
   margin: 0.5rem;
   pointer-events: none;
 }
